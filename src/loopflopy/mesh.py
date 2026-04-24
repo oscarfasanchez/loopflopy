@@ -936,7 +936,7 @@ class Mesh:
                     
                     att_name = f"{subgroup}_cells"
                     print(att_name)
-                    setattr(self, att_name, cells)
+                    setattr(self, att_name, intersecting_cells)
                     flag += 1
             
     def plot_cell2d(self, spatial, features = None, xlim = None, ylim = None, 
