@@ -219,7 +219,7 @@ class Mesh:
                     for node in range(len(self.welnodes[bore])):
                         spatial.bore_refinement_nodes.append(self.welnodes[bore][node])
 
-    def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list):
+    def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list, maxtri_per_poly = None):
         """
         Prepare constraint nodes and polygons for unstructured mesh generation.
         
@@ -277,12 +277,17 @@ class Mesh:
         self.nodes = np.array(self.nodes)
 
         self.polygons = [] # POLYGONS[(polygon, (x,y), maxtri)]
-        for p in polygon_list: # e.g. p could be "model_boundary_poly"
+        for i, p in enumerate(polygon_list): # e.g. p could be "model_boundary_poly"
             polygon = getattr(spatial, p)
+            if maxtri_per_poly is not None:
+                maxtri = maxtri_per_poly[i]
+            else:
+                maxtri = self.modelmaxtri
             if type(polygon) == Polygon:            
                 self.polygons.append((list(polygon.exterior.coords), 
-                                      (polygon.representative_point().x, polygon.representative_point().y), 
-                                       self.modelmaxtri)) 
+                                      (polygon.representative_point().x, 
+                                       polygon.representative_point().y), 
+                                       maxtri)) 
             else:
                 print("polygon ", n, " needs to be a Shapely Polygon")
             
