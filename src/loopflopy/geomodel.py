@@ -1145,11 +1145,7 @@ class Geomodel:
         gdf = gpd.GeoDataFrame(geometry=contour_lines, crs = spatial.epsg)
         gdf.to_file('../data/data_shp/geomodel_surface_contours.shp', driver='ESRI Shapefile')
 
-<<<<<<< Updated upstream
-    def geomodel_transect_lith(self, title = None, figsize = (8,3), extent = None, plot_node = None, **kwargs):
-=======
     def geomodel_transect_lith(self, title = None, xlim = None, zlim = None, figsize = (8,3), plot_node = None, extent = None, **kwargs):
->>>>>>> Stashed changes
         """
         Plot a cross-sectional view of the geological model showing lithology.
         
