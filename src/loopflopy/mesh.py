@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import flopy
 import geopandas as gpd
 from shapely.geometry import LineString,Point,Polygon,MultiPolygon,MultiPoint,shape
+from shapely.ops import unary_union
 from flopy.discretization import VertexGrid
 from flopy.utils.triangle import Triangle as Triangle
 from flopy.utils.voronoi import VoronoiGrid
@@ -219,6 +220,25 @@ class Mesh:
                     for node in range(len(self.welnodes[bore])):
                         spatial.bore_refinement_nodes.append(self.welnodes[bore][node])
 
+    def get_representative_points(self):
+        """
+        For each polygon, find a representative point within its own area,
+        excluding regions shared with any peer polygon at the same or deeper level.
+        Parent-child overlaps (containment) are permitted.
+        """
+        results = []
+        for i, poly in enumerate(self.polygon_shp):
+            # Exclude all OTHER polygons that are not parents of this one
+            peers = [
+                p for j, p in enumerate(self.polygon_shp)
+                if j != i and not p.contains(poly)  # skip polygons that fully contain this one
+            ]
+            exclusive = poly.difference(unary_union(peers)) if peers else poly
+            pt = exclusive.representative_point()
+            results.append(pt)
+        return results
+
+
     def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list, maxtri_per_poly = None):
         """
         Prepare constraint nodes and polygons for unstructured mesh generation.
@@ -278,6 +298,10 @@ class Mesh:
             self.nodes = np.array(self.nodes)
 
         self.polygons = [] # POLYGONS[(polygon, (x,y), maxtri)]
+        self.polygon_shp = [getattr(spatial, p) for p in polygon_list]
+        
+        points = self.get_representative_points()
+
         for i, p in enumerate(polygon_list): # e.g. p could be "model_boundary_poly"
             polygon = getattr(spatial, p)
             if maxtri_per_poly is not None:
@@ -286,8 +310,9 @@ class Mesh:
                 maxtri = self.modelmaxtri
             if type(polygon) == Polygon:            
                 self.polygons.append((list(polygon.exterior.coords), 
-                                      (polygon.representative_point().x, 
-                                       polygon.representative_point().y), 
+                                      (points[i].x,points[i].y),
+                                      # (polygon.representative_point().x, 
+                                       # polygon.representative_point().y), 
                                        maxtri)) 
             else:
                 print("polygon ", n, " needs to be a Shapely Polygon")
