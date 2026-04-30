@@ -266,15 +266,16 @@ class Mesh:
             List of polygon constraint tuples: (coords, point, max_area).
         """
         self.nodes = []
-        for n in node_list: # e.g. n could be "faults_nodes"
-            print(n)
-            points = getattr(spatial, n)
-            if type(points) == list:            
-                for point in points: 
-                    self.nodes.append(point)
-            else:
-                print("node_list ", n, " needs to be a list of tuples")
-        self.nodes = np.array(self.nodes)
+        if node_list is not None:
+            for n in node_list: # e.g. n could be "faults_nodes"
+                print(n)
+                points = getattr(spatial, n)
+                if type(points) == list:            
+                    for point in points: 
+                        self.nodes.append(point)
+                else:
+                    print("node_list ", n, " needs to be a list of tuples")
+            self.nodes = np.array(self.nodes)
 
         self.polygons = [] # POLYGONS[(polygon, (x,y), maxtri)]
         for i, p in enumerate(polygon_list): # e.g. p could be "model_boundary_poly"
@@ -427,11 +428,15 @@ class Mesh:
             
         if self.plangrid == 'tri':
             print("Creating triangular grid")
-        
+            
+            if len(self.nodes) > 0:
+                nodes = self.nodes
+            else:
+                nodes = None
             tri = Triangle(angle    = self.angle, 
                            model_ws = project.workspace, 
                            exe_name = project.triexe, 
-                           nodes    = self.nodes,
+                           nodes    = nodes,
                            additional_args = ['-j','-D'])
         
             for poly in self.polygons:
