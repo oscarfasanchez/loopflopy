@@ -219,7 +219,7 @@ class Mesh:
                     for node in range(len(self.welnodes[bore])):
                         spatial.bore_refinement_nodes.append(self.welnodes[bore][node])
 
-    def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list):
+    def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list, maxtri_per_poly = None):
         """
         Prepare constraint nodes and polygons for unstructured mesh generation.
         
@@ -277,12 +277,17 @@ class Mesh:
         self.nodes = np.array(self.nodes)
 
         self.polygons = [] # POLYGONS[(polygon, (x,y), maxtri)]
-        for p in polygon_list: # e.g. p could be "model_boundary_poly"
+        for i, p in enumerate(polygon_list): # e.g. p could be "model_boundary_poly"
             polygon = getattr(spatial, p)
+            if maxtri_per_poly is not None:
+                maxtri = maxtri_per_poly[i]
+            else:
+                maxtri = self.modelmaxtri
             if type(polygon) == Polygon:            
                 self.polygons.append((list(polygon.exterior.coords), 
-                                      (polygon.representative_point().x, polygon.representative_point().y), 
-                                       self.modelmaxtri)) 
+                                      (polygon.representative_point().x, 
+                                       polygon.representative_point().y), 
+                                       maxtri)) 
             else:
                 print("polygon ", n, " needs to be a Shapely Polygon")
             
@@ -415,7 +420,7 @@ class Mesh:
             self.gi = flopy.utils.GridIntersect(self.vgrid)
             
             if hasattr(spatial, 'model_boundary_poly'):
-                cells_within_bd = self.gi.intersect(spatial.model_boundary_poly)["cellids"]
+                cells_within_bd = self.gi.intersect(spatial.model_boundary_poly, geo_dataframe=True)["cellids"]
                 self.idomain = np.zeros((self.ncpl))
                 for icpl in cells_within_bd:
                     self.idomain[icpl] = 1
@@ -550,6 +555,7 @@ class Mesh:
         ycenters = xyzcenters[1][0]
         iverts = sg.iverts
         verts = sg.verts
+
 
         cell2d = []
         xcyc = [] # added 
@@ -803,14 +809,14 @@ class Mesh:
         
         Examples
         --------
-        >>> # Define special cells with observation and pumping wells
-        >>> special_cells = {
-        ...     'obs': ['monitoring'],
-        ...     'wel': ['production'],
-        ...     'chd': ['west', 'east']
-        ... }
-        >>> mesh = Mesh('tri', special_cells=special_cells)
-        >>> mesh.locate_special_cells(spatial, threshold=0.8)
+        # Define special cells with observation and pumping wells
+        special_cells = {
+             'obs': ['monitoring'],
+             'wel': ['production'],
+             'chd': ['west', 'east']
+         }
+         mesh = Mesh('tri', special_cells=special_cells)
+         mesh.locate_special_cells(spatial, threshold=0.8)
         """
         
         self.obs_cells = [] 
@@ -840,7 +846,7 @@ class Mesh:
                     self.cell_type.append(f'{group} - {subgroup}')
                     points = [Point(xy) for xy in spatial.xyobsbores]
                     for point in points:
-                        cell = self.gi.intersect(point)["cellids"][0]
+                        cell = self.gi.intersect(point, geo_dataframe=True)["cellids"][0]
                         self.ibd[cell] = flag
                         self.obs_cells.append(cell)
                     flag += 1
@@ -851,7 +857,7 @@ class Mesh:
                     self.cell_type.append(f'{group} - {subgroup}')
                     points = [Point(xy) for xy in spatial.xypumpbores]
                     for point in points:
-                        cell = self.gi.intersect(point)["cellids"][0]
+                        cell = self.gi.intersect(point, geo_dataframe=True)["cellids"][0]
                         self.ibd[cell] = flag
                         self.wel_cells.append(cell)
                     flag += 1
@@ -863,7 +869,7 @@ class Mesh:
                     att_name = f"chd_{subgroup}_ls"
                     ls = getattr(spatial, att_name)
                     
-                    cells = self.gi.intersects(ls)["cellids"]
+                    cells = self.gi.intersects(ls, dataframe=True)["cellids"]
 
                     att_name = f"chd_{subgroup}_cells"
                     setattr(self, att_name, cells)
@@ -895,7 +901,7 @@ class Mesh:
                     self.cell_type.append(f'{group} - {subgroup}')
                     att_name = f"{subgroup}_poly"
                     poly = getattr(spatial, att_name)
-                    result = self.gi.intersect(poly)
+                    result = self.gi.intersect(poly, geo_dataframe=True)
                     cells = result.cellids
 
                     for cell in cells:
@@ -935,7 +941,7 @@ class Mesh:
                     
                     att_name = f"{subgroup}_cells"
                     print(att_name)
-                    setattr(self, att_name, cells)
+                    setattr(self, att_name, intersecting_cells)
                     flag += 1
             
     def plot_cell2d(self, spatial, features = None, xlim = None, ylim = None, 
@@ -1147,10 +1153,11 @@ class Mesh:
 
         plt.savefig(fname)
 
-    def plot_surface_array(self, array, structuralmodel, plot_data = False, 
+    def plot_surface_array(self, array, structuralmodel, 
+                           plot_data = False, 
                            vmin = None, vmax = None, 
                            plot_grid = False, 
-                           levels = None, title = None):
+                           levels = None, title = None,):
         """
         Plot a 2D array over the mesh surface with geological context.
         
@@ -1277,6 +1284,6 @@ class Mesh:
         cbar = plt.colorbar(t, shrink = 0.5)  
         #cg = pmv.contour_array(array, levels=levels, linewidths=0.8, colors="0.75")
         if xy:# Plot points
-            ax.plot(xy[0], xy[1], 'o', ms = 2, color = 'red')
+            ax.plot(xy[0], xy[1], 'o', ms = 2, color = 'black')
         if xlim: ax.set_xlim(xlim) 
         if ylim: ax.set_ylim(ylim) 

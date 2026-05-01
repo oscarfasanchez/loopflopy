@@ -30,7 +30,7 @@ def make_bbox_shp(spatial, x0, x1, y0, y1):
     bbox_gdf.to_file('../data/shp/bbox.shp')
     spatial.bbox_gdf = bbox_gdf
 
-def model_boundary(spatial, boundary_buff, simplify_tolerance, node_spacing):
+def make_model_boundary(spatial, boundary_buff, simplify_tolerance, node_spacing):
     
     # Crop bbox with coastline on West coast
     model_boundary_shp_fname = '../data/shp/Coastline_LGATE_070.shp'
@@ -73,26 +73,7 @@ def model_boundary(spatial, boundary_buff, simplify_tolerance, node_spacing):
     spatial.inner_boundary_poly = inner_boundary_poly
     spatial.x0, spatial.y0, spatial.x1, spatial.y1 = model_boundary_poly.bounds
 
-'''def model_boundary(spatial, boundary_buff, simplify_tolerance, node_spacing):
-
-    model_boundary_gdf = gpd.read_file('../data/shp/model_boundary.shp')
-    model_boundary_gdf.to_crs(epsg=28350, inplace=True)
-    model_boundary_gs = model_boundary_gdf.geometry.simplify(tolerance=simplify_tolerance, preserve_topology=True)
-    model_boundary_poly = resample_gdf_poly(model_boundary_gs, node_spacing)
-
-    # Create an inner boundary for meshing
-    inner_boundary_poly = model_boundary_poly.buffer(-boundary_buff)
-    inner_boundary_gs = gpd.GeoSeries([inner_boundary_poly])
-    inner_boundary_poly = resample_gdf_poly(inner_boundary_gs, node_spacing) #  A few less nodes in inside boundary
-    
-    
-    spatial.model_boundary_gdf = model_boundary_gdf
-    model_boundary_gdf.to_file('../modelfiles/model_boundary.shp')
-    spatial.model_boundary_poly = model_boundary_poly
-    spatial.inner_boundary_poly = inner_boundary_poly
-    spatial.x0, spatial.y0, spatial.x1, spatial.y1 = model_boundary_poly.bounds'''
-
-def head_boundary(spatial):    
+def make_head_boundary(spatial):    
 
     # CHD EAST BOUNDARY
     inner_boundary_poly = spatial.model_boundary_poly.buffer(-1)
@@ -124,43 +105,43 @@ def head_boundary(spatial):
     spatial.chd_west_gdf = chd_west_gdf
     spatial.chd_west_ls = chd_west_ls
 
-def geo_bores(spatial):   
+def make_geo_bores(spatial):   
     df = pd.read_excel('../data/example_data.xlsx', sheet_name = 'geo_bores')
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Easting, df.Northing), crs=spatial.epsg)
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.x, df.y), crs=spatial.epsg)
     gdf = gpd.clip(gdf, spatial.model_boundary_poly).reset_index(drop=True)
     spatial.geobore_gdf = gdf
-    spatial.idgeobores = list(gdf.ID)
-    spatial.xygeobores = list(zip(gdf.Easting, gdf.Northing))
+    spatial.idgeobores = list(gdf.id)
+    spatial.xygeobores = list(zip(gdf.x, gdf.y))
     
-def obs_bores(spatial):   
+def make_obs_bores(spatial):   
     df = pd.read_excel('../data/example_data.xlsx', sheet_name = 'obs_bores')
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Easting, df.Northing), crs=spatial.epsg)
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.x, df.y), crs=spatial.epsg)
     gdf = gpd.clip(gdf, spatial.model_boundary_poly).reset_index(drop=True)
     spatial.obsbore_gdf = gdf
-    spatial.idobsbores = list(gdf.ID)
-    spatial.xyobsbores = list(zip(gdf.Easting, gdf.Northing))
+    spatial.idobsbores = list(gdf.id)
+    spatial.xyobsbores = list(zip(gdf.x, gdf.y))
     spatial.nobs = len(spatial.xyobsbores)
     
-def pilot_points(spatial):   
+def make_pilot_points(spatial):   
     df = pd.read_excel('../data/example_data.xlsx', sheet_name = 'pilot_points')
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Easting, df.Northing), crs=spatial.epsg)
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.x, df.y), crs=spatial.epsg)
     #gdf = gpd.clip(gdf, spatial.model_boundary_poly).reset_index(drop=True)
     spatial.pilotpoint_gdf = gdf
-    spatial.idpilotpoints = list(gdf.ID)
-    spatial.xypilotpoints = list(zip(gdf.Easting, gdf.Northing))
+    spatial.idpilotpoints = list(gdf.id)
+    spatial.xypilotpoints = list(zip(gdf.x, gdf.y))
     spatial.npp = len(spatial.xypilotpoints)
 
-def pump_bores(spatial):    
+def make_pump_bores(spatial):    
     df = pd.read_excel('../data/example_data.xlsx', sheet_name = 'pumping_bores')
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Easting, df.Northing), crs=spatial.epsg)
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.x, df.y), crs=spatial.epsg)
     gdf = gpd.clip(gdf, spatial.model_boundary_poly).reset_index(drop=True)
     spatial.pumpbore_gdf = gdf
-    spatial.idpumpbores = list(gdf.ID)
-    spatial.xypumpbores = list(zip(gdf.Easting, gdf.Northing))
+    spatial.idpumpbores = list(gdf.id)
+    spatial.xypumpbores = list(zip(gdf.x, gdf.y))
     spatial.npump = len(spatial.xypumpbores)
 
 
-def faults(spatial):  
+def make_faults(spatial):  
     # Import fault shape file
     faults_gdf = gpd.read_file('../data/shp/fault_trace.shp')
     faults_gdf.to_crs(epsg=28350, inplace=True)
@@ -193,7 +174,7 @@ def faults(spatial):
     spatial.faults_gdf = faults_gdf   
     spatial.fault_nodes = fault_nodes
    
-def lakes(spatial):  
+def make_lakes(spatial):  
 
     gdf = gpd.read_file('../data/shp/EPP_Lakes.shp')
     gdf.to_crs(epsg=28350, inplace=True)
@@ -210,19 +191,38 @@ def lakes(spatial):
     spatial.lake_gdf = gpd.GeoDataFrame(geometry = [poly])
     spatial.lake_nodes = list(spatial.lake_gdf.geometry[0].exterior.coords) 
 
-def plot_spatial(spatial, fault = True, 
+def make_xsections(spatial, xlsx_fname, sheet_name):  
+    df = pd.read_excel(xlsx_fname, sheet_name)
+    spatial.xsection_names = [str(name) for name in df['Name']]
+    spatial.xsections = [
+        [(row['x0'], row['y0']), (row['x1'], row['y1'])] 
+        for _, row in df.iterrows()
+]
+    #spatial.xsections = [
+                        #  [(365000, 6512000),(392000, 6517000)], 
+                        #  [(370000, 6505000),(392000, 6510000)],
+                        #  [(370000, 6522200),(378000, 6501800)],
+                        #  [(378000, 6522200),(386000, 6501800)]
+                        #  ]
+
+def plot_spatial_inputs(
+                 spatial, 
                  boundaries = True, 
                  lake = True,
+                 fault = False, 
                  pilotpoints = False,
-                 obsbores = True, 
-                 geobores = True, 
+                 truthpoints = False,
+                 obsbores = False, 
+                 geobores = False, 
                  controlpoints = False,
-                 pumpbores = True, 
+                 pumpbores = False, 
                  xsections = False, 
-                 extent = None):    # extent[[x0,x1], [y0,y1]]
+                 extent = None, 
+                 title=None):    # extent[[x0,x1], [y0,y1]]
     
     fig, ax = plt.subplots(figsize = (7,7))
-    ax.set_title('Example spatial files')
+    if title:
+        ax.set_title(title)
        
     x, y = spatial.model_boundary_poly.exterior.xy
     ax.plot(x, y, '-o', ms = 2, lw = 1, color='black')
@@ -256,31 +256,37 @@ def plot_spatial(spatial, fault = True,
         spatial.chd_west_gdf.plot(ax=ax, markersize = 12, color = 'red', zorder=2)
     
     if geobores:
-        gdf = spatial.geobore_gdf[spatial.geobore_gdf.Data_type == 'Raw']
+        gdf = spatial.geobore_gdf[spatial.geobore_gdf.type == 'Raw']
         gdf.plot(ax=ax, markersize = 12, color = 'green', zorder=2)
-        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.ID):
+        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.id):
             ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 10, color = 'green', textcoords="offset points")
 
     if controlpoints:
-        gdf = spatial.geobore_gdf[spatial.geobore_gdf.Data_type == 'Control']
+        gdf = spatial.geobore_gdf[spatial.geobore_gdf.type == 'Control']
         gdf.plot(ax=ax, markersize = 12, color = 'purple', zorder=2)
-        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.ID):
+        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.id):
             ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 10, color = 'purple', textcoords="offset points")
+
+    if truthpoints:
+        gdf = spatial.geobore_gdf[spatial.geobore_gdf.type == 'Truth']
+        gdf.plot(ax=ax, markersize = 12, color = 'black', zorder=2)
+        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.id):
+            ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 10, color = 'black', textcoords="offset points")
 
     if obsbores:
         spatial.obsbore_gdf.plot(ax=ax, markersize = 5, color = 'blue', zorder=2)
-        for x, y, label in zip(spatial.obsbore_gdf.geometry.x, spatial.obsbore_gdf.geometry.y, spatial.obsbore_gdf.ID):
+        for x, y, label in zip(spatial.obsbore_gdf.geometry.x, spatial.obsbore_gdf.geometry.y, spatial.obsbore_gdf.id):
             ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 7, color = 'blue', textcoords="offset points")
 
     if pilotpoints:
         gdf = spatial.pilotpoint_gdf[spatial.pilotpoint_gdf.Unit == 'TQ']
         gdf.plot(ax=ax, markersize = 5, color = 'red', zorder=2)
-        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.ID):
+        for x, y, label in zip(gdf.geometry.x, gdf.geometry.y, gdf.id):
             ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 7, color = 'red', textcoords="offset points")
 
     if pumpbores:
         spatial.pumpbore_gdf.plot(ax=ax, markersize = 12, color = 'black', zorder=2)
-        for x, y, label in zip(spatial.pumpbore_gdf.geometry.x, spatial.pumpbore_gdf.geometry.y, spatial.pumpbore_gdf.ID):
+        for x, y, label in zip(spatial.pumpbore_gdf.geometry.x, spatial.pumpbore_gdf.geometry.y, spatial.pumpbore_gdf.id):
             ax.annotate(label, xy=(x, y), xytext=(2, 2), size = 10, textcoords="offset points")
 
     plt.savefig('../figures/spatial.png')

@@ -7,6 +7,69 @@ import math
 from scipy.interpolate import griddata
 
 class StructuralModel:
+    """
+    A structural geological model class for creating 3D geological frameworks.
+    
+    This class wraps LoopStructural modeling functionality to create, visualize,
+    and export 3D geological models. It manages geological data, stratigraphic
+    sequences, structural features (folds, faults), and provides visualization
+    methods for quality control.
+    
+    Parameters
+    ----------
+    bbox : list of lists
+        Model bounding box as [[x0, y0, z0], [x1, y1, z1]] defining the
+        spatial extent of the model domain.
+    geodata_fname : str
+        Path to Excel file containing geological data.
+    data_sheetname : str
+        Name of Excel sheet containing structural orientation and contact data.
+    strat_sheetname : str
+        Name of Excel sheet containing stratigraphic column information.
+    
+    Attributes
+    ----------
+    bbox : list
+        Model bounding box.
+    origin : ndarray
+        Model origin coordinates [x0, y0, z0].
+    maximum : ndarray
+        Model maximum coordinates [x1, y1, z1].
+    x0, y0, z0 : float
+        Minimum coordinates in each direction.
+    x1, y1, z1 : float
+        Maximum coordinates in each direction.
+    model : LoopStructural.GeologicalModel
+        The LoopStructural geological model object (set after creating model).
+    strat_names : list
+        List of stratigraphic unit names.
+    data : pandas.DataFrame
+        Geological observation data (contacts, orientations).
+    strat : pandas.DataFrame
+        Stratigraphic column data.
+    cmap : matplotlib.colors.Colormap
+        Colormap for visualizing lithology.
+    norm : matplotlib.colors.Normalize
+        Normalization for lithology colors.
+    
+    Notes
+    -----
+    The typical workflow involves:
+    1. Initialize with bounding box and data file paths
+    2. Load data and create LoopStructural model
+    3. Use plotting methods for visualization and QC
+    4. Generate surfaces for use in flow modeling
+    
+    The class provides various transect plotting methods for visualizing
+    the 3D geological architecture from different orientations.
+    
+    Examples
+    --------
+    >>> bbox = [[0, 0, -500], [10000, 10000, 100]]
+    >>> sm = StructuralModel(bbox, 'geomodel.xlsx', 'Data', 'Stratigraphy')
+    >>> sm.plot_transect(x0=0, x1=10000, y0=5000, y1=5000, 
+    ...                 z0=-500, z1=100, nh=100, nv=50)
+    """
     def __init__(self, bbox, geodata_fname, data_sheetname, strat_sheetname):
         self.geodata_fname = geodata_fname
         self.data_sheetname = data_sheetname
@@ -18,7 +81,7 @@ class StructuralModel:
         self.x0, self.y0, self.z0 = bbox[0][0], bbox[0][1], bbox[0][2]
         self.x1, self.y1, self.z1 = bbox[1][0], bbox[1][1], bbox[1][2]
         
-    def plot_xytransect(self, title, start, end, z0, z1, nh, nz, **kwargs):
+    def plot_xytransect(self, title, start, end, z0, z1, nh, nz, figsize=(10, 4),**kwargs):
     
         x0 = start[0]
         y0 = start[1]
@@ -39,7 +102,7 @@ class StructuralModel:
 
         extent0 = 0
         extent1 = np.sqrt((x1-x0)**2 + (y1-y0)**2)
-        fig, ax = plt.subplots(figsize=(10,4))
+        fig, ax = plt.subplots(figsize=figsize)
 
         csa = plt.imshow(np.ma.masked_where(V<0,V), origin = "lower", 
                          extent = [extent0, extent1,z0,z1], #[x0,x1,z0,z1], 
@@ -52,7 +115,7 @@ class StructuralModel:
 
         cbar = plt.colorbar(csa,
                             boundaries = boundaries,
-                            shrink = 0.2
+                            shrink = 0.5
                             )
         cbar.ax.set_yticks(ticks = ticks, labels = labels, size = 8, verticalalignment = 'center')    
         #plt.xticks(ticks = [], labels = [])
@@ -60,7 +123,7 @@ class StructuralModel:
         plt.ylabel('Elev. (mAHD)')
         plt.title(title, size = 8)
         
-        plt.show()
+        #plt.show()
         plt.savefig('../figures/structural_xytransect.png')
         
     
@@ -314,7 +377,7 @@ class StructuralModel:
             plt.savefig('../figures/structural_ytransects.png')
             plt.show()
 
-    def plot_transect(self, x0, x1, y0, y1, z0, z1, nh, nv, dz, faults = False, **kwargs):
+    def plot_transect(self, x0, x1, y0, y1, z0, z1, nh, nv, dz, figsize=(12, 3), faults = False, **kwargs):
         # dz = spacing of bedding layers. Array length of dz should match the number of features in self.sequence_names
         # nh, nv is the plotting resolution of lithology
 
@@ -337,7 +400,7 @@ class StructuralModel:
         ticks = [i for i in np.arange(0,len(labels))]
         boundaries = np.arange(-1,len(labels),1)+0.5
 
-        fig = plt.figure(figsize=(12, 3))
+        fig = plt.figure(figsize=figsize)
         ax = plt.subplot(111)
         ax.set_aspect('equal')
 
@@ -432,9 +495,10 @@ class StructuralModel:
         plt.colorbar(c, ax = ax, shrink = 0.5)
 
 
-    def make_surfaces(self):
+    def make_surfaces(self, mesh):
 
         surfaces = []
+        surfaces_xyz = []
         for i in range(len(self.vals)-1): # Don't create surface for the bottom lithology   
             feature =self.sequences[i]
             vals = [self.vals[i]]
@@ -451,8 +515,10 @@ class StructuralModel:
             filtered_z = z[valid_mask]
             
             #print('len filtered z ', len(filtered_z), ' i.e. without NaN or inf')
-            surface = griddata(filtered_points, filtered_z, (self.mesh.xc, self.mesh.yc), method='nearest') #'linear'
+            surface = griddata(filtered_points, filtered_z, (mesh.xc, mesh.yc), method='linear') #'linear'
             #print(np.unique(surface, return_counts=True))
 
             surfaces.append(surface)
+            surfaces_xyz.append((x,y,z))
         self.surfaces = surfaces
+        self.surfaces_xyz = surfaces_xyz
