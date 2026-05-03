@@ -3,28 +3,33 @@
 
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 import sys
 import os
 import glob
-import flopy
 import math
 import numbers
-import matplotlib.image as mpimg
 from math import pi
 
-from scipy.interpolate import interp1d
 import pandas as pd
 import pickle
-import shapefile
-import matplotlib as mpl
 from collections import OrderedDict
 import subprocess as sup
-from flopy.utils.triangle import Triangle as Triangle
-import geopandas as gpd
-from shapely.geometry import LineString,Point,Polygon,shape
-import fiona
 from datetime import datetime
+from loopflopy._optional import optional_import
+
+plt = optional_import("matplotlib.pyplot", install_hint="Install loopflopy with plotting/example dependencies.")
+mpimg = optional_import("matplotlib.image", install_hint="Install loopflopy with plotting/example dependencies.")
+mpl = optional_import("matplotlib", install_hint="Install loopflopy with plotting/example dependencies.")
+flopy = optional_import("flopy", install_hint="Install loopflopy core dependencies.")
+interp1d = optional_import("scipy.interpolate", attr="interp1d", install_hint="Install loopflopy core dependencies.")
+shapefile = optional_import("shapefile", install_hint="Install pyshp or loopflopy GIS dependencies.")
+Triangle = optional_import("flopy.utils.triangle", attr="Triangle", install_hint="Install loopflopy core dependencies.")
+gpd = optional_import("geopandas", install_hint="Install loopflopy with the gis extra.")
+LineString = optional_import("shapely.geometry", attr="LineString", install_hint="Install loopflopy with the gis extra.")
+Point = optional_import("shapely.geometry", attr="Point", install_hint="Install loopflopy with the gis extra.")
+Polygon = optional_import("shapely.geometry", attr="Polygon", install_hint="Install loopflopy with the gis extra.")
+shape = optional_import("shapely.geometry", attr="shape", install_hint="Install loopflopy with the gis extra.")
+fiona = optional_import("fiona", install_hint="Install loopflopy with the gis extra.")
 
 # logfunc = lambda e: np.log10(e)
 
@@ -46,7 +51,7 @@ def print_object_details(obj):
 
 
 def find_kji(cell,nlay,nrow,ncol): #cellid is zerobased
-    cellid = cell - 1
+    cellid = cell
     k = math.floor(cellid/(ncol*nrow)) # Zero based
     j = math.floor((cellid - k*ncol*nrow)/ncol) # Zero based
     i = cellid - k*ncol*nrow - j*ncol

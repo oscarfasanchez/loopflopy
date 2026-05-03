@@ -1,14 +1,17 @@
-import geopandas as gpd
-import flopy
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import gridspec
-import sys
 import loopflopy.utils as utils
 import pandas as pd
+from loopflopy._optional import optional_import
 
-sys.path.append(r'C:\Users\00105295\Projects\Lab_tools\Geostats_tools')
-from Krigger import optimized_kriging
+gpd = optional_import("geopandas", install_hint="Install loopflopy with the gis extra.")
+flopy = optional_import("flopy", install_hint="Install loopflopy core dependencies.")
+plt = optional_import("matplotlib.pyplot", install_hint="Install loopflopy with plotting/example dependencies.")
+gridspec = optional_import("matplotlib.gridspec", install_hint="Install loopflopy with plotting/example dependencies.")
+optimized_kriging = optional_import(
+    "Krigger",
+    attr="optimized_kriging",
+    install_hint="Install Krigger or add it to PYTHONPATH before using kriging methods.",
+)
 
 
 

@@ -33,6 +33,8 @@ gis = [
   "fiona>=1.9,<2",
   "pyproj>=3.5,<4",
   "rtree>=1.0,<2",
+  "folium>=0.12,<1",
+  "mapclassify>=2.6,<3",
   "rasterstats>=0.16,<1",
   "rasterio>=1.3,<2",
 ]
@@ -74,7 +76,8 @@ notebook = [
 examples = [
   # GIS
   "geopandas>=1.0,<2", "shapely>=2.0,<3", "fiona>=1.9,<2", "pyproj>=3.5,<4",
-  "rtree>=1.0,<2", "rasterstats>=0.16,<1", "rasterio>=1.3,<2",
+  "rtree>=1.0,<2", "folium>=0.12,<1", "mapclassify>=2.6,<3",
+  "rasterstats>=0.16,<1", "rasterio>=1.3,<2",
   # LoopStructural + 3D viz
   "loopstructural>=1.6,<2", "alphashape>=1.3,<2",
   "pyvista>=0.44,<0.47", "vtk>=9.3,<9.4",
@@ -118,4 +121,15 @@ include = [
   "LICENSE",
   "src/loopflopy",
   "examples/**",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers -m 'not integration and not gis and not slow'"
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+  "unit: fast tests for deterministic code that should not need external files, GIS stacks, or model executables",
+  "integration: tests that exercise multiple package components or real workflow wiring",
+  "gis: tests that require optional GIS dependencies or geospatial files",
+  "slow: tests that are too slow for the default local feedback loop",
 ]

@@ -2,15 +2,17 @@
 # It is still a work in progress and will be updated as I work through the different discretisation schemes and test them.
 
 import numpy as np
-import flopy
 import math
 from datetime import datetime
-import matplotlib.pyplot as plt
-import matplotlib.colors
-from scipy.interpolate import griddata
-from shapely.geometry import LineString
-import geopandas as gpd
 import loopflopy.utils as utils
+from loopflopy._optional import optional_import
+
+flopy = optional_import("flopy", install_hint="Install loopflopy core dependencies.")
+plt = optional_import("matplotlib.pyplot", install_hint="Install loopflopy with plotting/example dependencies.")
+matplotlib = optional_import("matplotlib", install_hint="Install loopflopy with plotting/example dependencies.")
+griddata = optional_import("scipy.interpolate", attr="griddata", install_hint="Install loopflopy core dependencies.")
+LineString = optional_import("shapely.geometry", attr="LineString", install_hint="Install loopflopy with the gis extra.")
+gpd = optional_import("geopandas", install_hint="Install loopflopy with the gis extra.")
 
 
 logfunc = lambda e: np.log10(e)
@@ -97,6 +99,9 @@ def find_angle1(nv):
     This angle represents the direction a ball would roll down the surface.
     """
     a, b, c = nv[0], nv[1], nv[2]
+
+    if np.isclose(a, 0.0) and np.isclose(b, 0.0):
+        return 0.0
 
     # Find steepest descent gradient (g) in the x-y plane (Angle 1)
     g = np.array([-a/c, b/c])
