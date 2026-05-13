@@ -464,10 +464,10 @@ class Mesh:
                            nodes    = nodes,
                            additional_args = ['-j','-D'])
         
-            for poly in self.polygons:
+            for i, poly in enumerate(self.polygons):
                 tri.add_polygon(poly[0]) 
                 if poly[1] != 0: # Flag set to zero if region not required
-                    tri.add_region(poly[1], 0, maximum_area = poly[2]) # Picks a point in main model
+                    tri.add_region(poly[1], i, maximum_area = poly[2]) # Picks a point in main model
         
             tri.build(verbose=False) # Builds triangular grid
         
@@ -495,7 +495,7 @@ class Mesh:
                 if poly[1] != 0: # Flag set to zero if region not required
                     tri.add_region(poly[1], 0, maximum_area = poly[2]) # Picks a point in main model
         
-            tri.build(verbose=False) # Builds triangular grid
+            tri.build(verbose=True) # Builds triangular grid
         
             self.vor = VoronoiGrid(tri)
             self.vertices = self.vor.get_disv_gridprops()['vertices']
@@ -943,7 +943,7 @@ class Mesh:
                     flag += 1
             
             if group == 'multipoly':
-                print(dir(self.vgrid))
+                # print(dir(self.vgrid))
                 def path_to_polygon(path):
                     verts = path.vertices # The mesh is not a gdf at this point, but it needs to be to interact with other gdfs as below - create polygon
                     return Polygon(verts)
@@ -1256,6 +1256,7 @@ class Mesh:
                    vmax = None, 
                    levels = None, 
                    title = None, 
+                   fname = None,
                    xlim = None, ylim = None,
                    xy = None):
         """
@@ -1274,6 +1275,8 @@ class Mesh:
             Contour levels to draw (default: None, no contours).
         title : str, optional
             Plot title (default: None).
+        fname : str, optional
+            Plot filename (default: None).
         xlim, ylim : tuple, optional
             Plot extent limits as (min, max) tuples.
         xy : tuple of array_like, optional
@@ -1317,3 +1320,4 @@ class Mesh:
             ax.plot(xy[0], xy[1], 'o', ms = 2, color = 'black')
         if xlim: ax.set_xlim(xlim) 
         if ylim: ax.set_ylim(ylim) 
+        if fname: plt.savefig(f"../figures/{fname}", dpi=300)
