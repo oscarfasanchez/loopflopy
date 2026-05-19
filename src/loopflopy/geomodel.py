@@ -1145,7 +1145,7 @@ class Geomodel:
         gdf = gpd.GeoDataFrame(geometry=contour_lines, crs = spatial.epsg)
         gdf.to_file('../data/data_shp/geomodel_surface_contours.shp', driver='ESRI Shapefile')
 
-    def geomodel_transect_lith(self, title = None, xlim = None, zlim = None, figsize = (8,3), plot_node = None, extent = None, **kwargs):
+    def geomodel_transect_lith(self, title = None, xlim = None, zlim = None, figsize = (8,3), plot_node = None, extent = None, grid = True, **kwargs):
         """
         Plot a cross-sectional view of the geological model showing lithology.
         
@@ -1208,7 +1208,8 @@ class Geomodel:
         else:
             ax.set_ylim([z0, z1])
   
-        linecollection = xsect.plot_grid(lw = 0.1, color = 'black') 
+        if grid:
+            linecollection = xsect.plot_grid(lw = 0.1, color = 'black') 
 
         if plot_node != None:
             x, y, z = utils.disucell_to_xyz(self, plot_node)
