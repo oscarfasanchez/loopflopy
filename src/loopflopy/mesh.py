@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import flopy
 import geopandas as gpd
 from shapely.geometry import LineString,Point,Polygon,MultiPolygon,MultiPoint,shape
+from shapely.ops import unary_union
 from flopy.discretization import VertexGrid
 from flopy.utils.triangle import Triangle as Triangle
 from flopy.utils.voronoi import VoronoiGrid
@@ -219,6 +220,25 @@ class Mesh:
                     for node in range(len(self.welnodes[bore])):
                         spatial.bore_refinement_nodes.append(self.welnodes[bore][node])
 
+    def get_representative_points(self):
+        """
+        For each polygon, find a representative point within its own area,
+        excluding regions shared with any peer polygon at the same or deeper level.
+        Parent-child overlaps (containment) are permitted.
+        """
+        results = []
+        for i, poly in enumerate(self.polygon_shp):
+            # Exclude all OTHER polygons that are not parents of this one
+            peers = [
+                p for j, p in enumerate(self.polygon_shp)
+                if j != i and not p.contains(poly)  # skip polygons that fully contain this one
+            ]
+            exclusive = poly.difference(unary_union(peers)) if peers else poly
+            pt = exclusive.representative_point()
+            results.append(pt)
+        return results
+
+
     def prepare_nodes_and_polygons(self, spatial, node_list, polygon_list, maxtri_per_poly = None):
         """
         Prepare constraint nodes and polygons for unstructured mesh generation.
@@ -266,17 +286,22 @@ class Mesh:
             List of polygon constraint tuples: (coords, point, max_area).
         """
         self.nodes = []
-        for n in node_list: # e.g. n could be "faults_nodes"
-            print(n)
-            points = getattr(spatial, n)
-            if type(points) == list:            
-                for point in points: 
-                    self.nodes.append(point)
-            else:
-                print("node_list ", n, " needs to be a list of tuples")
-        self.nodes = np.array(self.nodes)
+        if node_list is not None:
+            for n in node_list: # e.g. n could be "faults_nodes"
+                print(n)
+                points = getattr(spatial, n)
+                if type(points) == list:            
+                    for point in points: 
+                        self.nodes.append(point)
+                else:
+                    print("node_list ", n, " needs to be a list of tuples")
+            self.nodes = np.array(self.nodes)
 
         self.polygons = [] # POLYGONS[(polygon, (x,y), maxtri)]
+        self.polygon_shp = [getattr(spatial, p) for p in polygon_list]
+        
+        points = self.get_representative_points()
+
         for i, p in enumerate(polygon_list): # e.g. p could be "model_boundary_poly"
             polygon = getattr(spatial, p)
             if maxtri_per_poly is not None:
@@ -285,8 +310,9 @@ class Mesh:
                 maxtri = self.modelmaxtri
             if type(polygon) == Polygon:            
                 self.polygons.append((list(polygon.exterior.coords), 
-                                      (polygon.representative_point().x, 
-                                       polygon.representative_point().y), 
+                                      (points[i].x,points[i].y),
+                                      # (polygon.representative_point().x, 
+                                       # polygon.representative_point().y), 
                                        maxtri)) 
             else:
                 print("polygon ", n, " needs to be a Shapely Polygon")
@@ -427,17 +453,21 @@ class Mesh:
             
         if self.plangrid == 'tri':
             print("Creating triangular grid")
-        
+            
+            if len(self.nodes) > 0:
+                nodes = self.nodes
+            else:
+                nodes = None
             tri = Triangle(angle    = self.angle, 
                            model_ws = project.workspace, 
                            exe_name = project.triexe, 
-                           nodes    = self.nodes,
+                           nodes    = nodes,
                            additional_args = ['-j','-D'])
         
-            for poly in self.polygons:
+            for i, poly in enumerate(self.polygons):
                 tri.add_polygon(poly[0]) 
                 if poly[1] != 0: # Flag set to zero if region not required
-                    tri.add_region(poly[1], 0, maximum_area = poly[2]) # Picks a point in main model
+                    tri.add_region(poly[1], i, maximum_area = poly[2]) # Picks a point in main model
         
             tri.build(verbose=False) # Builds triangular grid
         
@@ -465,7 +495,7 @@ class Mesh:
                 if poly[1] != 0: # Flag set to zero if region not required
                     tri.add_region(poly[1], 0, maximum_area = poly[2]) # Picks a point in main model
         
-            tri.build(verbose=False) # Builds triangular grid
+            tri.build(verbose=True) # Builds triangular grid
         
             self.vor = VoronoiGrid(tri)
             self.vertices = self.vor.get_disv_gridprops()['vertices']
@@ -913,7 +943,7 @@ class Mesh:
                     flag += 1
             
             if group == 'multipoly':
-                print(dir(self.vgrid))
+                # print(dir(self.vgrid))
                 def path_to_polygon(path):
                     verts = path.vertices # The mesh is not a gdf at this point, but it needs to be to interact with other gdfs as below - create polygon
                     return Polygon(verts)
@@ -1226,6 +1256,7 @@ class Mesh:
                    vmax = None, 
                    levels = None, 
                    title = None, 
+                   fname = None,
                    xlim = None, ylim = None,
                    xy = None):
         """
@@ -1244,6 +1275,8 @@ class Mesh:
             Contour levels to draw (default: None, no contours).
         title : str, optional
             Plot title (default: None).
+        fname : str, optional
+            Plot filename (default: None).
         xlim, ylim : tuple, optional
             Plot extent limits as (min, max) tuples.
         xy : tuple of array_like, optional
@@ -1287,3 +1320,4 @@ class Mesh:
             ax.plot(xy[0], xy[1], 'o', ms = 2, color = 'black')
         if xlim: ax.set_xlim(xlim) 
         if ylim: ax.set_ylim(ylim) 
+        if fname: plt.savefig(f"../figures/{fname}", dpi=300)
