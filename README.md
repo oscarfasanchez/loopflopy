@@ -240,7 +240,7 @@ Please open an issue with a minimal script and error text if you’re stuck.
 
 * Source code: `src/loopflopy/`
 * Examples: `examples/`
-* Tests: `tests/` (soon)
+* Tests: `tests/` (see [TESTING.md](TESTING.md))
 
 ### Dev setup
 
@@ -254,14 +254,14 @@ pre-commit install   # enable formatting/linting on commit
 Run tests:
 
 ```bash
-pytest -q --disable-warnings --maxfail=1
+python -m pytest -q
 ```
 
 ### Typical flow
 
 1. Fork and create a feature branch.
-2. Add/adjust examples and unit tests if relevant(soon).
-3. Run linters/tests locally (soon).
+2. Add/adjust examples and tests for behavioral changes.
+3. Run linters/tests locally.
 4. Open a PR with a clear description and motivation.
 
 Please also use the issue tracker for bug reports and feature requests.
